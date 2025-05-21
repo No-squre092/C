@@ -1,0 +1,86 @@
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+
+// Function to compress data using RLE
+void compressRLE(const char *inputFile, const char *outputFile) {
+    FILE *in = fopen(inputFile, "rb");
+    if (!in) {
+        perror("Error opening input file");
+        exit(1);
+    }
+
+    FILE *out = fopen(outputFile, "wb");
+    if (!out) {
+        perror("Error opening output file");
+        exit(1);
+    }
+
+    unsigned char current, next;
+    int count = 1;
+
+    if (fread(&current, 1, 1, in) != 1) {
+        fclose(in);
+        fclose(out);
+        return;
+    }
+
+    while (fread(&next, 1, 1, in) == 1) {
+        if (next == current && count < 255) {
+            count++;
+        } else {
+            fwrite(&count, 1, 1, out);
+            fwrite(&current, 1, 1, out);
+            current = next;
+            count = 1;
+        }
+    }
+
+    // Write the last run
+    fwrite(&count, 1, 1, out);
+    fwrite(&current, 1, 1, out);
+
+    fclose(in);
+    fclose(out);
+}
+
+// Function to decompress RLE data
+void decompressRLE(const char *inputFile, const char *outputFile) {
+    FILE *in = fopen(inputFile, "rb");
+    if (!in) {
+        perror("Error opening input file");
+        exit(1);
+    }
+
+    FILE *out = fopen(outputFile, "wb");
+    if (!out) {
+        perror("Error opening output file");
+        exit(1);
+    }
+
+    unsigned char count, value;
+
+    while (fread(&count, 1, 1, in) == 1 && fread(&value, 1, 1, in) == 1) {
+        for (int i = 0; i < count; i++) {
+            fwrite(&value, 1, 1, out);
+        }
+    }
+
+    fclose(in);
+    fclose(out);
+}
+
+int main() {
+    const char *inputFile = "input.txt";
+    const char *compressedFile = "compressed.rle";
+    const char *decompressedFile = "decompressed.txt";
+
+    printf("Compressing '%s' to '%s'...\n", inputFile, compressedFile);
+    compressRLE(inputFile, compressedFile);
+
+    printf("Decompressing '%s' to '%s'...\n", compressedFile, decompressedFile);
+    decompressRLE(compressedFile, decompressedFile);
+
+    printf("Done!\n");
+    return 0;
+}
